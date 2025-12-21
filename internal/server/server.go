@@ -120,7 +120,9 @@ func (s *Server) handleListAccounts(ctx context.Context, request mcp.CallToolReq
 				Text: string(jsonData),
 			},
 		},
-		StructuredContent: accounts,
+		StructuredContent: map[string]interface{}{
+			"accounts": accounts,
+		},
 	}, nil
 }
 
@@ -218,7 +220,9 @@ func (s *Server) handleListTransactions(ctx context.Context, request mcp.CallToo
 				Text: string(jsonData),
 			},
 		},
-		StructuredContent: transactions,
+		StructuredContent: map[string]interface{}{
+			"transactions": transactions,
+		},
 	}, nil
 }
 
@@ -256,7 +260,9 @@ func (s *Server) handleListCategories(ctx context.Context, request mcp.CallToolR
 				Text: string(jsonData),
 			},
 		},
-		StructuredContent: categories,
+		StructuredContent: map[string]interface{}{
+			"categories": categories,
+		},
 	}, nil
 }
 
@@ -294,6 +300,8 @@ func (s *Server) handleListBudgets(ctx context.Context, request mcp.CallToolRequ
 				Text: string(jsonData),
 			},
 		},
-		StructuredContent: budgets,
+		StructuredContent: map[string]interface{}{
+			"budgets": budgets,
+		},
 	}, nil
 }

@@ -43,9 +43,21 @@ The server will automatically look for `ipadMoneyWiz.sqlite` in the specified fo
 
 ### MCP Client Configuration
 
-To use this server with an MCP client (like Claude Desktop or ChatGPT), add it to your MCP configuration file.
+To use this server with an MCP client (like Claude Desktop), add it to your MCP configuration file.
 
-#### Claude Desktop Configuration
+#### Quick Setup (Recommended)
+
+Run the setup script:
+
+```bash
+./setup.sh
+```
+
+This will automatically configure Claude Desktop with the correct paths.
+
+#### Manual Configuration
+
+**Claude Desktop Configuration**
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
@@ -53,12 +65,21 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "moneywiz": {
-      "command": "/path/to/moneywiz-mcp",
-      "args": ["-db", "/path/to/iMoneyWiz-Data-Backup-2025_12_21-17_23"]
+      "command": "/Users/max/Developer/moneywiz-mcp/moneywiz-mcp",
+      "args": ["-db", "/Users/max/Developer/moneywiz-mcp/iMoneyWiz-Data-Backup-2025_12_21-17_23"]
     }
   }
 }
 ```
+
+**Important**: Replace the paths with your actual absolute paths.
+
+After updating the configuration:
+1. Quit Claude Desktop completely (⌘Q)
+2. Reopen Claude Desktop
+3. The MCP server should connect automatically
+
+For detailed setup instructions, see [SETUP.md](SETUP.md).
 
 ## Available Tools
 
