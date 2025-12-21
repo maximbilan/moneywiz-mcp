@@ -75,15 +75,6 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 		},
 	}, s.handleListCategories)
 
-	// List budgets tool
-	mcpServer.AddTool(mcp.Tool{
-		Name:        "list_budgets",
-		Description: "List all budgets in MoneyWiz",
-		InputSchema: mcp.ToolInputSchema{
-			Type:       "object",
-			Properties: map[string]any{},
-		},
-	}, s.handleListBudgets)
 }
 
 func (s *Server) handleListAccounts(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -266,42 +257,3 @@ func (s *Server) handleListCategories(ctx context.Context, request mcp.CallToolR
 	}, nil
 }
 
-func (s *Server) handleListBudgets(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	budgets, err := s.db.GetBudgets()
-	if err != nil {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Error: %v", err),
-				},
-			},
-			IsError: true,
-		}, nil
-	}
-
-	jsonData, err := json.MarshalIndent(budgets, "", "  ")
-	if err != nil {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Error marshaling budgets: %v", err),
-				},
-			},
-			IsError: true,
-		}, nil
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
-		},
-		StructuredContent: map[string]interface{}{
-			"budgets": budgets,
-		},
-	}, nil
-}
