@@ -75,6 +75,79 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 		},
 	}, s.handleListCategories)
 
+	// Analyze spending trends tool
+	mcpServer.AddTool(mcp.Tool{
+		Name:        "analyze_spending_trends",
+		Description: "Analyze spending trends by category and time period (month or year)",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]any{
+				"group_by": map[string]any{
+					"type":        "string",
+					"description": "Group by 'month' or 'year' (default: 'month')",
+					"enum":        []string{"month", "year"},
+					"default":     "month",
+				},
+				"months": map[string]any{
+					"type":        "integer",
+					"description": "Number of months to analyze (default: 6)",
+					"default":     6,
+				},
+			},
+		},
+	}, s.handleAnalyzeSpendingTrends)
+}
+
+func (s *Server) handleAnalyzeSpendingTrends(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	groupBy := request.GetString("group_by", "month")
+	months := request.GetInt("months", 6)
+
+	if months <= 0 {
+		months = 6
+	}
+	if groupBy != "month" && groupBy != "year" {
+		groupBy = "month"
+	}
+
+	trends, err := s.db.AnalyzeSpendingTrends(groupBy, months)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Error: %v", err),
+				},
+			},
+			IsError: true,
+		}, nil
+	}
+
+	jsonData, err := json.MarshalIndent(trends, "", "  ")
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Error marshaling trends: %v", err),
+				},
+			},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: string(jsonData),
+			},
+		},
+		StructuredContent: map[string]interface{}{
+			"trends":    trends,
+			"group_by":  groupBy,
+			"months":    months,
+		},
+	}, nil
 }
 
 func (s *Server) handleListAccounts(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
