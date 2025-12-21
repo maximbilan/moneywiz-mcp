@@ -134,6 +134,16 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 			},
 		},
 	}, s.handleGetSavingsRecommendations)
+
+	// Calculate net worth tool
+	mcpServer.AddTool(mcp.Tool{
+		Name:        "calculate_net_worth",
+		Description: "Calculate total net worth from all accounts (assets minus liabilities)",
+		InputSchema: mcp.ToolInputSchema{
+			Type:       "object",
+			Properties: map[string]any{},
+		},
+	}, s.handleCalculateNetWorth)
 }
 
 func (s *Server) handleAnalyzeSpendingTrends(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -281,6 +291,44 @@ func (s *Server) handleGetSavingsRecommendations(ctx context.Context, request mc
 			},
 		},
 		StructuredContent: analysis,
+	}, nil
+}
+
+func (s *Server) handleCalculateNetWorth(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	netWorth, err := s.db.CalculateNetWorth()
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Error: %v", err),
+				},
+			},
+			IsError: true,
+		}, nil
+	}
+
+	jsonData, err := json.MarshalIndent(netWorth, "", "  ")
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Error marshaling net worth: %v", err),
+				},
+			},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: string(jsonData),
+			},
+		},
+		StructuredContent: netWorth,
 	}, nil
 }
 
