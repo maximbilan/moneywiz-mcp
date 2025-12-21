@@ -33,3 +33,7 @@ go.work.sum
 
 # Database
 iMoneyWiz-Data-Backup-2025_12_21-17_23
+
+# Built binary
+main
+moneywiz-mcp
