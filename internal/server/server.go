@@ -118,6 +118,22 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 			},
 		},
 	}, s.handleAnalyzeIncomeTrends)
+
+	// Savings recommendations tool
+	mcpServer.AddTool(mcp.Tool{
+		Name:        "get_savings_recommendations",
+		Description: "Analyze income vs spending and get personalized savings recommendations",
+		InputSchema: mcp.ToolInputSchema{
+			Type: "object",
+			Properties: map[string]any{
+				"months": map[string]any{
+					"type":        "integer",
+					"description": "Number of months to analyze (default: 6)",
+					"default":     6,
+				},
+			},
+		},
+	}, s.handleGetSavingsRecommendations)
 }
 
 func (s *Server) handleAnalyzeSpendingTrends(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -221,6 +237,50 @@ func (s *Server) handleAnalyzeIncomeTrends(ctx context.Context, request mcp.Call
 			"group_by":  groupBy,
 			"months":    months,
 		},
+	}, nil
+}
+
+func (s *Server) handleGetSavingsRecommendations(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	months := request.GetInt("months", 6)
+
+	if months <= 0 {
+		months = 6
+	}
+
+	analysis, err := s.db.AnalyzeSavings(months)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Error: %v", err),
+				},
+			},
+			IsError: true,
+		}, nil
+	}
+
+	jsonData, err := json.MarshalIndent(analysis, "", "  ")
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Error marshaling analysis: %v", err),
+				},
+			},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: string(jsonData),
+			},
+		},
+		StructuredContent: analysis,
 	}, nil
 }
 
