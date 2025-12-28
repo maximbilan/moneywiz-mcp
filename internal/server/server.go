@@ -90,8 +90,8 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 				},
 				"months": map[string]any{
 					"type":        "integer",
-					"description": "Number of months to analyze (default: 6)",
-					"default":     6,
+					"description": "Number of months to analyze (0 or omitted = all historical data)",
+					"default":     0,
 				},
 			},
 		},
@@ -112,8 +112,8 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 				},
 				"months": map[string]any{
 					"type":        "integer",
-					"description": "Number of months to analyze (default: 6)",
-					"default":     6,
+					"description": "Number of months to analyze (0 or omitted = all historical data)",
+					"default":     0,
 				},
 			},
 		},
@@ -128,8 +128,8 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 			Properties: map[string]any{
 				"months": map[string]any{
 					"type":        "integer",
-					"description": "Number of months to analyze (default: 6)",
-					"default":     6,
+					"description": "Number of months to analyze (0 or omitted = all historical data)",
+					"default":     0,
 				},
 			},
 		},
@@ -158,11 +158,8 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 
 func (s *Server) handleAnalyzeSpendingTrends(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	groupBy := request.GetString("group_by", "month")
-	months := request.GetInt("months", 6)
+	months := request.GetInt("months", 0)
 
-	if months <= 0 {
-		months = 6
-	}
 	if groupBy != "month" && groupBy != "year" {
 		groupBy = "month"
 	}
@@ -201,20 +198,17 @@ func (s *Server) handleAnalyzeSpendingTrends(ctx context.Context, request mcp.Ca
 			},
 		},
 		StructuredContent: map[string]interface{}{
-			"trends":    trends,
-			"group_by":  groupBy,
-			"months":    months,
+			"trends":   trends,
+			"group_by": groupBy,
+			"months":   months,
 		},
 	}, nil
 }
 
 func (s *Server) handleAnalyzeIncomeTrends(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	groupBy := request.GetString("group_by", "month")
-	months := request.GetInt("months", 6)
+	months := request.GetInt("months", 0)
 
-	if months <= 0 {
-		months = 6
-	}
 	if groupBy != "month" && groupBy != "year" {
 		groupBy = "month"
 	}
@@ -253,19 +247,15 @@ func (s *Server) handleAnalyzeIncomeTrends(ctx context.Context, request mcp.Call
 			},
 		},
 		StructuredContent: map[string]interface{}{
-			"trends":    trends,
-			"group_by":  groupBy,
-			"months":    months,
+			"trends":   trends,
+			"group_by": groupBy,
+			"months":   months,
 		},
 	}, nil
 }
 
 func (s *Server) handleGetSavingsRecommendations(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	months := request.GetInt("months", 6)
-
-	if months <= 0 {
-		months = 6
-	}
+	months := request.GetInt("months", 0)
 
 	analysis, err := s.db.AnalyzeSavings(months)
 	if err != nil {
@@ -559,4 +549,3 @@ func (s *Server) handleListCategories(ctx context.Context, request mcp.CallToolR
 		},
 	}, nil
 }
-
