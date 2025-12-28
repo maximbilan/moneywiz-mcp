@@ -7,32 +7,32 @@ import (
 
 // SavingsRecommendation represents a savings recommendation
 type SavingsRecommendation struct {
-	Type        string  `json:"type"`         // "warning", "suggestion", "positive"
+	Type        string  `json:"type"` // "warning", "suggestion", "positive"
 	Title       string  `json:"title"`
 	Description string  `json:"description"`
-	Priority    string  `json:"priority"`     // "high", "medium", "low"
-	Impact      float64 `json:"impact"`       // Potential savings amount
+	Priority    string  `json:"priority"` // "high", "medium", "low"
+	Impact      float64 `json:"impact"`   // Potential savings amount
 }
 
 // SavingsAnalysis represents comprehensive savings analysis
 type SavingsAnalysis struct {
-	Period              string                  `json:"period"`
-	TotalIncome         float64                 `json:"total_income"`
-	TotalSpending       float64                 `json:"total_spending"`
-	NetSavings          float64                 `json:"net_savings"`
-	SavingsRate         float64                 `json:"savings_rate"`         // Percentage
-	AverageMonthlyIncome float64                 `json:"average_monthly_income"`
-	AverageMonthlySpending float64                `json:"average_monthly_spending"`
-	TopSpendingCategories []CategorySpending     `json:"top_spending_categories"`
-	Recommendations     []SavingsRecommendation  `json:"recommendations"`
+	Period                 string                  `json:"period"`
+	TotalIncome            float64                 `json:"total_income"`
+	TotalSpending          float64                 `json:"total_spending"`
+	NetSavings             float64                 `json:"net_savings"`
+	SavingsRate            float64                 `json:"savings_rate"` // Percentage
+	AverageMonthlyIncome   float64                 `json:"average_monthly_income"`
+	AverageMonthlySpending float64                 `json:"average_monthly_spending"`
+	TopSpendingCategories  []CategorySpending      `json:"top_spending_categories"`
+	Recommendations        []SavingsRecommendation `json:"recommendations"`
 }
 
 // CategorySpending represents spending by category
 type CategorySpending struct {
-	CategoryName string  `json:"category_name"`
-	TotalAmount  float64 `json:"total_amount"`
-	Percentage   float64 `json:"percentage"` // Percentage of total spending
-	TransactionCount int `json:"transaction_count"`
+	CategoryName     string  `json:"category_name"`
+	TotalAmount      float64 `json:"total_amount"`
+	Percentage       float64 `json:"percentage"` // Percentage of total spending
+	TransactionCount int     `json:"transaction_count"`
 }
 
 // AnalyzeSavings analyzes income vs spending and provides recommendations
@@ -82,16 +82,16 @@ func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
 
 	// Get top spending categories
 	type catSpend struct {
-		name  string
+		name   string
 		amount float64
-		count int
+		count  int
 	}
 	var topCategories []catSpend
 	for name, amount := range spendingAmountByCategory {
 		topCategories = append(topCategories, catSpend{
-			name:  name,
+			name:   name,
 			amount: amount,
-			count: spendingByCategory[name],
+			count:  spendingByCategory[name],
 		})
 	}
 
@@ -135,15 +135,15 @@ func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
 	)
 
 	return &SavingsAnalysis{
-		Period:                fmt.Sprintf("Last %d months", months),
-		TotalIncome:           totalIncome,
-		TotalSpending:         totalSpending,
-		NetSavings:            netSavings,
-		SavingsRate:           savingsRate,
-		AverageMonthlyIncome:  averageMonthlyIncome,
+		Period:                 fmt.Sprintf("Last %d months", months),
+		TotalIncome:            totalIncome,
+		TotalSpending:          totalSpending,
+		NetSavings:             netSavings,
+		SavingsRate:            savingsRate,
+		AverageMonthlyIncome:   averageMonthlyIncome,
 		AverageMonthlySpending: averageMonthlySpending,
-		TopSpendingCategories: topSpendingCategories,
-		Recommendations:      recommendations,
+		TopSpendingCategories:  topSpendingCategories,
+		Recommendations:        recommendations,
 	}, nil
 }
 
@@ -257,5 +257,3 @@ func (db *DB) generateSavingsRecommendations(
 
 	return recommendations
 }
-
-

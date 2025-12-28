@@ -17,10 +17,10 @@ type SpendingData struct {
 
 // SpendingTrend represents aggregated spending trend data
 type SpendingTrend struct {
-	Period         string             `json:"period"`          // "YYYY-MM" or "YYYY"
-	TotalSpending  float64            `json:"total_spending"`
-	TransactionCount int               `json:"transaction_count"`
-	ByCategory     map[string]float64 `json:"by_category"`     // Category name -> total
+	Period           string             `json:"period"` // "YYYY-MM" or "YYYY"
+	TotalSpending    float64            `json:"total_spending"`
+	TransactionCount int                `json:"transaction_count"`
+	ByCategory       map[string]float64 `json:"by_category"` // Category name -> total
 }
 
 // GetSpendingData retrieves spending transactions with category information
@@ -30,7 +30,7 @@ func (db *DB) GetSpendingData(months int) ([]SpendingData, error) {
 	// Calculate date range: months back from now
 	// Core Data timestamp: seconds since 2001-01-01
 	// Get the latest transaction date to calculate the cutoff
-	
+
 	var query string
 	if months > 0 {
 		// Calculate cutoff timestamp: months * average seconds per month (30.44 days)
@@ -91,12 +91,12 @@ func (db *DB) GetSpendingData(months int) ([]SpendingData, error) {
 		var date sql.NullString
 		var month sql.NullString
 		var year sql.NullString
-		
+
 		err := rows.Scan(&categoryID, &categoryName, &sd.Amount, &date, &month, &year)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan spending data: %w", err)
 		}
-		
+
 		if categoryID.Valid {
 			sd.CategoryID = categoryID.Int64
 		}
@@ -112,7 +112,7 @@ func (db *DB) GetSpendingData(months int) ([]SpendingData, error) {
 		if year.Valid {
 			sd.Year = year.String
 		}
-		
+
 		spending = append(spending, sd)
 	}
 
@@ -141,7 +141,7 @@ func (db *DB) AnalyzeSpendingTrends(groupBy string, months int) ([]SpendingTrend
 
 	// Group by period
 	trendsMap := make(map[string]*SpendingTrend)
-	
+
 	for _, s := range spending {
 		var period string
 		if groupBy == "year" {
@@ -149,18 +149,18 @@ func (db *DB) AnalyzeSpendingTrends(groupBy string, months int) ([]SpendingTrend
 		} else {
 			period = s.Month
 		}
-		
+
 		if period == "" {
 			continue
 		}
-		
+
 		if trendsMap[period] == nil {
 			trendsMap[period] = &SpendingTrend{
-				Period:        period,
-				ByCategory:    make(map[string]float64),
+				Period:     period,
+				ByCategory: make(map[string]float64),
 			}
 		}
-		
+
 		trend := trendsMap[period]
 		trend.TotalSpending += s.Amount
 		trend.TransactionCount++
@@ -184,5 +184,3 @@ func (db *DB) AnalyzeSpendingTrends(groupBy string, months int) ([]SpendingTrend
 
 	return trends, nil
 }
-
-

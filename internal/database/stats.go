@@ -6,29 +6,29 @@ import (
 
 // FinancialStats represents comprehensive financial statistics
 type FinancialStats struct {
-	TotalTransactions     int                `json:"total_transactions"`
-	TotalIncome           float64            `json:"total_income"`
-	TotalSpending         float64            `json:"total_spending"`
-	NetSavings            float64            `json:"net_savings"`
-	AverageTransaction    float64            `json:"average_transaction"`
-	LargestIncome         float64            `json:"largest_income"`
-	LargestExpense        float64            `json:"largest_expense"`
-	AccountCount          int                `json:"account_count"`
-	CategoryCount         int                `json:"category_count"`
-	FirstTransactionDate  string             `json:"first_transaction_date"`
-	LastTransactionDate   string             `json:"last_transaction_date"`
-	DateRange             string             `json:"date_range"`
-	IncomeTransactions     int                `json:"income_transactions"`
-	ExpenseTransactions    int                `json:"expense_transactions"`
-	ByYear                map[string]YearStats `json:"by_year"`
+	TotalTransactions    int                  `json:"total_transactions"`
+	TotalIncome          float64              `json:"total_income"`
+	TotalSpending        float64              `json:"total_spending"`
+	NetSavings           float64              `json:"net_savings"`
+	AverageTransaction   float64              `json:"average_transaction"`
+	LargestIncome        float64              `json:"largest_income"`
+	LargestExpense       float64              `json:"largest_expense"`
+	AccountCount         int                  `json:"account_count"`
+	CategoryCount        int                  `json:"category_count"`
+	FirstTransactionDate string               `json:"first_transaction_date"`
+	LastTransactionDate  string               `json:"last_transaction_date"`
+	DateRange            string               `json:"date_range"`
+	IncomeTransactions   int                  `json:"income_transactions"`
+	ExpenseTransactions  int                  `json:"expense_transactions"`
+	ByYear               map[string]YearStats `json:"by_year"`
 }
 
 // YearStats represents statistics for a specific year
 type YearStats struct {
-	Year              string  `json:"year"`
-	Income            float64 `json:"income"`
-	Spending          float64 `json:"spending"`
-	NetSavings        float64 `json:"net_savings"`
+	Year             string  `json:"year"`
+	Income           float64 `json:"income"`
+	Spending         float64 `json:"spending"`
+	NetSavings       float64 `json:"net_savings"`
 	TransactionCount int     `json:"transaction_count"`
 }
 
@@ -149,7 +149,7 @@ func (db *DB) GetFinancialStats() (*FinancialStats, error) {
 		NetSavings:           netSavings,
 		AverageTransaction:   averageTransaction,
 		LargestIncome:        largestIncome,
-		LargestExpense:        largestExpense,
+		LargestExpense:       largestExpense,
 		AccountCount:         len(accounts),
 		CategoryCount:        len(categories),
 		FirstTransactionDate: firstDate,
@@ -160,5 +160,3 @@ func (db *DB) GetFinancialStats() (*FinancialStats, error) {
 		ByYear:               yearStatsMap,
 	}, nil
 }
-
-

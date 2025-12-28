@@ -75,5 +75,3 @@ func (db *DB) GetTransactions(accountID int64, limit int) ([]Transaction, error)
 
 	return transactions, nil
 }
-
-

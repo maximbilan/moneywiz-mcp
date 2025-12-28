@@ -7,12 +7,12 @@ import (
 
 // NetWorth represents net worth calculation
 type NetWorth struct {
-	TotalAssets     float64            `json:"total_assets"`
+	TotalAssets      float64            `json:"total_assets"`
 	TotalLiabilities float64            `json:"total_liabilities"`
-	NetWorth        float64            `json:"net_worth"`
-	AccountCount    int                `json:"account_count"`
-	ByCurrency      map[string]float64 `json:"by_currency"` // Net worth by currency
-	Accounts        []AccountSummary   `json:"accounts"`    // Summary of all accounts
+	NetWorth         float64            `json:"net_worth"`
+	AccountCount     int                `json:"account_count"`
+	ByCurrency       map[string]float64 `json:"by_currency"` // Net worth by currency
+	Accounts         []AccountSummary   `json:"accounts"`    // Summary of all accounts
 }
 
 // AccountSummary represents a summary of an account for net worth calculation
@@ -66,13 +66,11 @@ func (db *DB) CalculateNetWorth() (*NetWorth, error) {
 	netWorth := totalAssets - totalLiabilities
 
 	return &NetWorth{
-		TotalAssets:     totalAssets,
+		TotalAssets:      totalAssets,
 		TotalLiabilities: totalLiabilities,
-		NetWorth:        netWorth,
-		AccountCount:    len(accounts),
-		ByCurrency:      byCurrency,
-		Accounts:        accountSummaries,
+		NetWorth:         netWorth,
+		AccountCount:     len(accounts),
+		ByCurrency:       byCurrency,
+		Accounts:         accountSummaries,
 	}, nil
 }
-
-

@@ -41,5 +41,3 @@ func (db *DB) GetCategories() ([]Category, error) {
 
 	return categories, nil
 }
-
-

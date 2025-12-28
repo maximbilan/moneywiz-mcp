@@ -17,10 +17,10 @@ type IncomeData struct {
 
 // IncomeTrend represents aggregated income trend data
 type IncomeTrend struct {
-	Period         string             `json:"period"`          // "YYYY-MM" or "YYYY"
-	TotalIncome    float64            `json:"total_income"`
-	TransactionCount int               `json:"transaction_count"`
-	ByCategory     map[string]float64 `json:"by_category"`     // Category name -> total
+	Period           string             `json:"period"` // "YYYY-MM" or "YYYY"
+	TotalIncome      float64            `json:"total_income"`
+	TransactionCount int                `json:"transaction_count"`
+	ByCategory       map[string]float64 `json:"by_category"` // Category name -> total
 }
 
 // GetIncomeData retrieves income transactions with category information
@@ -30,7 +30,7 @@ func (db *DB) GetIncomeData(months int) ([]IncomeData, error) {
 	// Calculate date range: months back from now
 	// Core Data timestamp: seconds since 2001-01-01
 	// Get the latest transaction date to calculate the cutoff
-	
+
 	var query string
 	if months > 0 {
 		// Calculate cutoff timestamp: months * average seconds per month (30.44 days)
@@ -91,12 +91,12 @@ func (db *DB) GetIncomeData(months int) ([]IncomeData, error) {
 		var date sql.NullString
 		var month sql.NullString
 		var year sql.NullString
-		
+
 		err := rows.Scan(&categoryID, &categoryName, &id.Amount, &date, &month, &year)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan income data: %w", err)
 		}
-		
+
 		if categoryID.Valid {
 			id.CategoryID = categoryID.Int64
 		}
@@ -112,7 +112,7 @@ func (db *DB) GetIncomeData(months int) ([]IncomeData, error) {
 		if year.Valid {
 			id.Year = year.String
 		}
-		
+
 		income = append(income, id)
 	}
 
@@ -141,7 +141,7 @@ func (db *DB) AnalyzeIncomeTrends(groupBy string, months int) ([]IncomeTrend, er
 
 	// Group by period
 	trendsMap := make(map[string]*IncomeTrend)
-	
+
 	for _, i := range income {
 		var period string
 		if groupBy == "year" {
@@ -149,18 +149,18 @@ func (db *DB) AnalyzeIncomeTrends(groupBy string, months int) ([]IncomeTrend, er
 		} else {
 			period = i.Month
 		}
-		
+
 		if period == "" {
 			continue
 		}
-		
+
 		if trendsMap[period] == nil {
 			trendsMap[period] = &IncomeTrend{
-				Period:        period,
-				ByCategory:    make(map[string]float64),
+				Period:     period,
+				ByCategory: make(map[string]float64),
 			}
 		}
-		
+
 		trend := trendsMap[period]
 		trend.TotalIncome += i.Amount
 		trend.TransactionCount++
@@ -184,5 +184,3 @@ func (db *DB) AnalyzeIncomeTrends(groupBy string, months int) ([]IncomeTrend, er
 
 	return trends, nil
 }
-
-
