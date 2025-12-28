@@ -125,11 +125,8 @@ func (db *DB) GetIncomeData(months int) ([]IncomeData, error) {
 
 // AnalyzeIncomeTrends analyzes income trends grouped by time period and category
 // groupBy: "month" or "year"
-// months: number of months to analyze (default: 6)
+// months: number of months to analyze (0 = all historical data)
 func (db *DB) AnalyzeIncomeTrends(groupBy string, months int) ([]IncomeTrend, error) {
-	if months <= 0 {
-		months = 6
-	}
 	if groupBy != "month" && groupBy != "year" {
 		groupBy = "month"
 	}

@@ -125,11 +125,8 @@ func (db *DB) GetSpendingData(months int) ([]SpendingData, error) {
 
 // AnalyzeSpendingTrends analyzes spending trends grouped by time period and category
 // groupBy: "month" or "year"
-// months: number of months to analyze (default: 6)
+// months: number of months to analyze (0 = all historical data)
 func (db *DB) AnalyzeSpendingTrends(groupBy string, months int) ([]SpendingTrend, error) {
-	if months <= 0 {
-		months = 6
-	}
 	if groupBy != "month" && groupBy != "year" {
 		groupBy = "month"
 	}

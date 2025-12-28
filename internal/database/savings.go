@@ -36,12 +36,8 @@ type CategorySpending struct {
 }
 
 // AnalyzeSavings analyzes income vs spending and provides recommendations
-// months: number of months to analyze (default: 6)
+// months: number of months to analyze (0 = all historical data)
 func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
-	if months <= 0 {
-		months = 6
-	}
-
 	// Get income and spending data
 	incomeData, err := db.GetIncomeData(months)
 	if err != nil {
@@ -59,14 +55,23 @@ func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
 	spendingByCategory := make(map[string]int) // count for transaction tracking
 	spendingAmountByCategory := make(map[string]float64)
 
+	// Track unique months to calculate actual month span when months is 0
+	uniqueMonths := make(map[string]bool)
+
 	for _, i := range incomeData {
 		totalIncome += i.Amount
+		if i.Month != "" {
+			uniqueMonths[i.Month] = true
+		}
 	}
 
 	for _, s := range spendingData {
 		totalSpending += s.Amount
 		spendingByCategory[s.CategoryName]++
 		spendingAmountByCategory[s.CategoryName] += s.Amount
+		if s.Month != "" {
+			uniqueMonths[s.Month] = true
+		}
 	}
 
 	netSavings := totalIncome - totalSpending
@@ -75,8 +80,16 @@ func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
 		savingsRate = (netSavings / totalIncome) * 100
 	}
 
-	// Calculate averages
+	// Calculate month count: use provided months, or calculate from data if months is 0
 	monthCount := float64(months)
+	if months == 0 {
+		monthCount = float64(len(uniqueMonths))
+		if monthCount == 0 {
+			monthCount = 1 // Avoid division by zero
+		}
+	}
+
+	// Calculate averages
 	averageMonthlyIncome := totalIncome / monthCount
 	averageMonthlySpending := totalSpending / monthCount
 
@@ -131,11 +144,19 @@ func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
 		averageMonthlyIncome,
 		averageMonthlySpending,
 		topSpendingCategories,
-		months,
+		monthCount,
 	)
 
+	// Format period string
+	periodStr := "All historical data"
+	if months > 0 {
+		periodStr = fmt.Sprintf("Last %d months", months)
+	} else if monthCount > 0 {
+		periodStr = fmt.Sprintf("All data (%d months)", int(monthCount))
+	}
+
 	return &SavingsAnalysis{
-		Period:                 fmt.Sprintf("Last %d months", months),
+		Period:                 periodStr,
 		TotalIncome:            totalIncome,
 		TotalSpending:          totalSpending,
 		NetSavings:             netSavings,
@@ -155,7 +176,7 @@ func (db *DB) generateSavingsRecommendations(
 	avgMonthlyIncome float64,
 	avgMonthlySpending float64,
 	topCategories []CategorySpending,
-	months int,
+	monthCount float64,
 ) []SavingsRecommendation {
 	var recommendations []SavingsRecommendation
 
@@ -202,7 +223,7 @@ func (db *DB) generateSavingsRecommendations(
 			recommendations = append(recommendations, SavingsRecommendation{
 				Type:        "suggestion",
 				Title:       fmt.Sprintf("Review Spending on %s", topCategory.CategoryName),
-				Description: fmt.Sprintf("%s accounts for %.1f%% of your spending. A 10%% reduction could save you %.2f per month.", topCategory.CategoryName, topCategory.Percentage, potentialSavings/float64(months)),
+				Description: fmt.Sprintf("%s accounts for %.1f%% of your spending. A 10%% reduction could save you %.2f per month.", topCategory.CategoryName, topCategory.Percentage, potentialSavings/monthCount),
 				Priority:    "medium",
 				Impact:      potentialSavings,
 			})
