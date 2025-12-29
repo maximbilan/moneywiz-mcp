@@ -56,16 +56,6 @@ The server will automatically look for `ipadMoneyWiz.sqlite` in the specified fo
 
 To use this server with an MCP client (like Claude Desktop), add it to your MCP configuration file.
 
-#### Quick Setup (Recommended)
-
-Run the setup script:
-
-```bash
-./setup.sh
-```
-
-This will automatically configure Claude Desktop with the correct paths.
-
 #### Manual Configuration
 
 **Claude Desktop Configuration**
@@ -87,8 +77,6 @@ After updating the configuration:
 1. Quit Claude Desktop completely (⌘Q)
 2. Reopen Claude Desktop
 3. The MCP server should connect automatically
-
-For detailed setup instructions, see [SETUP.md](SETUP.md).
 
 ## Available Tools
 
@@ -342,4 +330,4 @@ go build -o moneywiz-mcp ./cmd/main.go
 
 ## License
 
-See LICENSE file for details.
+See [LICENSE](LICENSE) file for details.
