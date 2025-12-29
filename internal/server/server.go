@@ -1,6 +1,8 @@
 package server
 
 import (
+	"log"
+
 	"github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
 	"github.com/moneywiz-mcp/internal/database"
@@ -15,7 +17,10 @@ func NewServer(db *database.DB) *Server {
 }
 
 func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
+	log.Println("🔧 Registering MCP tools...")
+	
 	// List accounts tool
+	log.Println("  ✓ Registering tool: list_accounts")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "list_accounts",
 		Description: "List all accounts in MoneyWiz with their balances and currencies",
@@ -26,6 +31,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	}, s.handleListAccounts)
 
 	// Get account balance tool
+	log.Println("  ✓ Registering tool: get_account_balance")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "get_account_balance",
 		Description: "Get the balance for a specific account by ID",
@@ -42,6 +48,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	}, s.handleGetAccountBalance)
 
 	// List transactions tool
+	log.Println("  ✓ Registering tool: list_transactions")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "list_transactions",
 		Description: "List recent transactions, optionally filtered by account ID",
@@ -62,6 +69,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	}, s.handleListTransactions)
 
 	// List categories tool
+	log.Println("  ✓ Registering tool: list_categories")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "list_categories",
 		Description: "List all categories in MoneyWiz",
@@ -72,6 +80,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	}, s.handleListCategories)
 
 	// Analyze spending trends tool
+	log.Println("  ✓ Registering tool: analyze_spending_trends")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "analyze_spending_trends",
 		Description: "Analyze spending trends by category and time period (month or year)",
@@ -94,6 +103,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	}, s.handleAnalyzeSpendingTrends)
 
 	// Analyze income trends tool
+	log.Println("  ✓ Registering tool: analyze_income_trends")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "analyze_income_trends",
 		Description: "Analyze income trends by category and time period (month or year)",
@@ -116,6 +126,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	}, s.handleAnalyzeIncomeTrends)
 
 	// Savings recommendations tool
+	log.Println("  ✓ Registering tool: get_savings_recommendations")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "get_savings_recommendations",
 		Description: "Analyze income vs spending and get personalized savings recommendations",
@@ -132,6 +143,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	}, s.handleGetSavingsRecommendations)
 
 	// Calculate net worth tool
+	log.Println("  ✓ Registering tool: calculate_net_worth")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "calculate_net_worth",
 		Description: "Calculate total net worth from all accounts (assets minus liabilities)",
@@ -142,6 +154,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	}, s.handleCalculateNetWorth)
 
 	// Get financial stats tool
+	log.Println("  ✓ Registering tool: get_financial_stats")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "get_financial_stats",
 		Description: "Get comprehensive financial statistics including total transactions, income, spending, and other metrics from all historical data",
@@ -150,4 +163,6 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 			Properties: map[string]any{},
 		},
 	}, s.handleGetFinancialStats)
+	
+	log.Println("✅ All 9 MCP tools registered successfully!")
 }
