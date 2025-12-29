@@ -330,4 +330,4 @@ go build -o moneywiz-mcp ./cmd/main.go
 
 ## License
 
-See LICENSE file for details.
+See [LICENSE](LICENSE) file for details.
