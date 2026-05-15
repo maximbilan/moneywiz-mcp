@@ -31,8 +31,9 @@ go.work.sum
 # .idea/
 # .vscode/
 
-# Database
-iMoneyWiz-Data-Backup-2025_12_21-17_23
+# MoneyWiz database exports / local copies
+iMoneyWiz-Data-Backup-*/
+ipadMoneyWiz.sqlite
 
 # Built binary
 main
