@@ -81,6 +81,15 @@ resolve_file_path() {
 normalize_db_path() {
   local value="$1"
   if [[ -z "$value" ]]; then
+    local canonical="$HOME/.moneywiz-mcp/ipadMoneyWiz.sqlite"
+    if [[ -f "$canonical" ]]; then
+      DB_PATH="$canonical"
+    fi
+    return 0
+  fi
+
+  if [[ "$value" == "latest" ]]; then
+    DB_PATH="latest"
     return 0
   fi
 

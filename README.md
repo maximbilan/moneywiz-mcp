@@ -37,13 +37,32 @@ This builds the binary, installs it to `~/.local/bin/moneywiz-mcp`, and register
 ./scripts/install.sh
 ```
 
-With explicit database path (folder or sqlite file):
+With explicit database path (folder/sqlite/latest):
 
 ```bash
 ./scripts/install.sh --db "/path/to/iMoneyWiz-Data-Backup-2025_12_21-17_23"
 ```
 
-### 3. One-click rebuild + reinstall (debug/dev loop)
+```bash
+./scripts/install.sh --db latest
+```
+
+### 3. Import DB to a stable path (recommended)
+
+Avoid dealing with changing export folder names by importing to:
+`~/.moneywiz-mcp/ipadMoneyWiz.sqlite`
+
+```bash
+./scripts/import_db.sh "/path/to/iMoneyWiz-Data-Backup-2025_12_21-17_23"
+```
+
+Then install using the stable file:
+
+```bash
+./scripts/install.sh --db "$HOME/.moneywiz-mcp/ipadMoneyWiz.sqlite"
+```
+
+### 4. One-click rebuild + reinstall (debug/dev loop)
 
 Use this after local code changes. It rebuilds and re-registers in one command.
 
@@ -51,13 +70,13 @@ Use this after local code changes. It rebuilds and re-registers in one command.
 ./scripts/rebuild_reinstall.sh --db "/path/to/iMoneyWiz-Data-Backup-2025_12_21-17_23"
 ```
 
-### 4. Manual build (optional)
+### 5. Manual build (optional)
 
 ```bash
 go build -o moneywiz-mcp ./cmd/main.go
 ```
 
-### 5. Uninstall
+### 6. Uninstall
 
 Remove MCP registration from Claude clients and delete installed binary:
 
@@ -90,7 +109,14 @@ Run directly with a database folder or sqlite file:
 The binary accepts either:
 - Export folder path (it appends `ipadMoneyWiz.sqlite`)
 - Direct sqlite file path
-- No `-db` (best-effort auto-detection in common locations)
+- `latest` (pick newest `iMoneyWiz-Data-Backup-*` found)
+- No `-db` (priority order below)
+
+Path resolution priority:
+1. `-db` argument
+2. `MONEYWIZ_DB_PATH` env var
+3. `~/.moneywiz-mcp/ipadMoneyWiz.sqlite` if present
+4. Auto-detect newest export folder in common locations
 
 ### MCP Client Configuration
 
