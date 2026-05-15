@@ -35,12 +35,13 @@ cd moneywiz-mcp
 ### 2. One-click install (recommended)
 
 This builds the binary, installs it to `~/.local/bin/moneywiz-mcp`, and registers it in Claude clients.
+If you omit `--db`, it reuses `~/.moneywiz-mcp/ipadMoneyWiz.sqlite` or imports the newest local `iMoneyWiz-Data-Backup-*` export automatically.
 
 ```bash
 ./scripts/install.sh
 ```
 
-With explicit database path (folder/sqlite/latest):
+With explicit database path (folder/sqlite):
 
 ```bash
 ./scripts/install.sh --db "/path/to/iMoneyWiz-Data-Backup-2025_12_21-17_23"
@@ -73,6 +74,12 @@ Then install using the stable file:
 
 ```bash
 ./scripts/install.sh --db "$HOME/.moneywiz-mcp/ipadMoneyWiz.sqlite"
+```
+
+Or let the installer do the import automatically:
+
+```bash
+./scripts/install.sh
 ```
 
 ### 4. One-click rebuild + reinstall (debug/dev loop)
@@ -155,7 +162,7 @@ Path resolution priority:
 **Claude Code (manual)**
 
 ```bash
-claude mcp add --scope user moneywiz /Users/<you>/.local/bin/moneywiz-mcp -db /absolute/path/to/ipadMoneyWiz.sqlite
+claude mcp add --scope user moneywiz -- /Users/<you>/.local/bin/moneywiz-mcp -db /absolute/path/to/ipadMoneyWiz.sqlite
 ```
 
 **Important**: Use absolute paths.

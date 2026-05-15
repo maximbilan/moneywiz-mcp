@@ -60,8 +60,14 @@ normalize_source_path() {
 }
 
 prepare_target_paths() {
-  TARGET_DB_PATH="$(resolve_file_path "$TARGET_DB_PATH")"
-  BACKUP_DIR="$(resolve_file_path "$BACKUP_DIR")"
+  case "$TARGET_DB_PATH" in
+    /*) ;;
+    *) TARGET_DB_PATH="$(pwd)/$TARGET_DB_PATH" ;;
+  esac
+  case "$BACKUP_DIR" in
+    /*) ;;
+    *) BACKUP_DIR="$(pwd)/$BACKUP_DIR" ;;
+  esac
   mkdir -p "$(dirname "$TARGET_DB_PATH")"
   mkdir -p "$BACKUP_DIR"
 }
