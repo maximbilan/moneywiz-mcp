@@ -16,45 +16,113 @@ An MCP (Model Context Protocol) server for accessing MoneyWiz database data. Thi
 
 ## Installation
 
-1. Clone this repository:
+### Prerequisites
+
+- macOS (for MoneyWiz export + Claude Desktop path conventions)
+- Go 1.22+ (required when installing from source)
+- MoneyWiz exported database folder containing `ipadMoneyWiz.sqlite`
+
+### 1. Clone
+
 ```bash
 git clone <repository-url>
 cd moneywiz-mcp
 ```
 
-2. Build the server:
+### 2. One-click install (recommended)
+
+This builds the binary, installs it to `~/.local/bin/moneywiz-mcp`, and registers it in Claude clients.
+
+```bash
+./scripts/install.sh
+```
+
+With explicit database path (folder/sqlite/latest):
+
+```bash
+./scripts/install.sh --db "/path/to/iMoneyWiz-Data-Backup-2025_12_21-17_23"
+```
+
+```bash
+./scripts/install.sh --db latest
+```
+
+### 3. Import DB to a stable path (recommended)
+
+Avoid dealing with changing export folder names by importing to:
+`~/.moneywiz-mcp/ipadMoneyWiz.sqlite`
+
+```bash
+./scripts/import_db.sh "/path/to/iMoneyWiz-Data-Backup-2025_12_21-17_23"
+```
+
+Then install using the stable file:
+
+```bash
+./scripts/install.sh --db "$HOME/.moneywiz-mcp/ipadMoneyWiz.sqlite"
+```
+
+### 4. One-click rebuild + reinstall (debug/dev loop)
+
+Use this after local code changes. It rebuilds and re-registers in one command.
+
+```bash
+./scripts/rebuild_reinstall.sh --db "/path/to/iMoneyWiz-Data-Backup-2025_12_21-17_23"
+```
+
+### 5. Manual build (optional)
+
 ```bash
 go build -o moneywiz-mcp ./cmd/main.go
 ```
 
-3. Export your MoneyWiz database:
-   - Open the MoneyWiz app
-   - Go to **Settings** → **Database & Export** → **Export database file**
-   - This will create a folder (e.g., `iMoneyWiz-Data-Backup-2025_12_21-17_23`) containing the SQLite database file (`ipadMoneyWiz.sqlite`)
+### 6. Uninstall
+
+Remove MCP registration from Claude clients and delete installed binary:
+
+```bash
+./scripts/uninstall.sh
+```
+
+Non-interactive:
+
+```bash
+./scripts/uninstall.sh --yes
+```
+
+### Export MoneyWiz Database
+
+1. Open MoneyWiz
+2. Go to **Settings** → **Database & Export** → **Export database file**
+3. Use the exported folder that contains `ipadMoneyWiz.sqlite`
 
 ## Usage
 
 ### Running the Server
 
-The server can be run with the database path specified via command-line argument:
+Run directly with a database folder or sqlite file:
 
 ```bash
 ./moneywiz-mcp -db /path/to/iMoneyWiz-Data-Backup-2025_12_21-17_23
 ```
 
-Or if the database folder is in the current directory:
+The binary accepts either:
+- Export folder path (it appends `ipadMoneyWiz.sqlite`)
+- Direct sqlite file path
+- `latest` (pick newest `iMoneyWiz-Data-Backup-*` found)
+- No `-db` (priority order below)
 
-```bash
-./moneywiz-mcp -db ./iMoneyWiz-Data-Backup-2025_12_21-17_23
-```
-
-The server will automatically look for `ipadMoneyWiz.sqlite` in the specified folder.
-
-**Note**: You need to export the database from MoneyWiz first (Settings → Database & Export → Export database file) to get the SQLite file.
+Path resolution priority:
+1. `-db` argument
+2. `MONEYWIZ_DB_PATH` env var
+3. `~/.moneywiz-mcp/ipadMoneyWiz.sqlite` if present
+4. Auto-detect newest export folder in common locations
 
 ### MCP Client Configuration
 
-To use this server with an MCP client (like Claude Desktop), add it to your MCP configuration file.
+`./scripts/install.sh` already handles configuration for:
+- Claude Desktop (`claude_desktop_config.json`)
+- Claude Code (`claude mcp add`)
 
 #### Manual Configuration
 
@@ -64,14 +132,20 @@ To use this server with an MCP client (like Claude Desktop), add it to your MCP 
 {
   "mcpServers": {
     "moneywiz": {
-      "command": "moneywiz-mcp/moneywiz-mcp",
-      "args": ["-db", "moneywiz-mcp/iMoneyWiz-Data-Backup-2025_12_21-17_23"]
+      "command": "/Users/<you>/.local/bin/moneywiz-mcp",
+      "args": ["-db", "/absolute/path/to/ipadMoneyWiz.sqlite"]
     }
   }
 }
 ```
 
-**Important**: Replace the paths with your actual absolute paths.
+**Claude Code (manual)**
+
+```bash
+claude mcp add --scope user moneywiz /Users/<you>/.local/bin/moneywiz-mcp -db /absolute/path/to/ipadMoneyWiz.sqlite
+```
+
+**Important**: Use absolute paths.
 
 After updating the configuration:
 1. Quit Claude Desktop completely (⌘Q)
