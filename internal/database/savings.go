@@ -23,8 +23,25 @@ type SavingsAnalysis struct {
 	SavingsRate            float64                 `json:"savings_rate"` // Percentage
 	AverageMonthlyIncome   float64                 `json:"average_monthly_income"`
 	AverageMonthlySpending float64                 `json:"average_monthly_spending"`
+	MixedCurrencies        bool                    `json:"mixed_currencies"`
+	Currencies             []string                `json:"currencies"`
+	PrimaryCurrency        string                  `json:"primary_currency,omitempty"`
+	CurrencyWarning        string                  `json:"currency_warning,omitempty"`
+	ByCurrency             map[string]CurrencyFlow `json:"by_currency"`
 	TopSpendingCategories  []CategorySpending      `json:"top_spending_categories"`
 	Recommendations        []SavingsRecommendation `json:"recommendations"`
+}
+
+type CurrencyFlow struct {
+	Currency               string             `json:"currency"`
+	TotalIncome            float64            `json:"total_income"`
+	TotalSpending          float64            `json:"total_spending"`
+	NetSavings             float64            `json:"net_savings"`
+	AverageMonthlyIncome   float64            `json:"average_monthly_income"`
+	AverageMonthlySpending float64            `json:"average_monthly_spending"`
+	IncomeTransactions     int                `json:"income_transactions"`
+	ExpenseTransactions    int                `json:"expense_transactions"`
+	TopSpendingCategories  []CategorySpending `json:"top_spending_categories"`
 }
 
 // CategorySpending represents spending by category
@@ -54,12 +71,22 @@ func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
 	var totalSpending float64
 	spendingByCategory := make(map[string]int) // count for transaction tracking
 	spendingAmountByCategory := make(map[string]float64)
+	byCurrency := make(map[string]*CurrencyFlow)
+	spendingByCurrencyAndCategory := make(map[string]map[string]int)
+	spendingAmountByCurrencyAndCategory := make(map[string]map[string]float64)
 
 	// Track unique months to calculate actual month span when months is 0
 	uniqueMonths := make(map[string]bool)
 
 	for _, i := range incomeData {
 		totalIncome += i.Amount
+		if i.Currency != "" {
+			if byCurrency[i.Currency] == nil {
+				byCurrency[i.Currency] = &CurrencyFlow{Currency: i.Currency}
+			}
+			byCurrency[i.Currency].TotalIncome += i.Amount
+			byCurrency[i.Currency].IncomeTransactions++
+		}
 		if i.Month != "" {
 			uniqueMonths[i.Month] = true
 		}
@@ -69,6 +96,19 @@ func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
 		totalSpending += s.Amount
 		spendingByCategory[s.CategoryName]++
 		spendingAmountByCategory[s.CategoryName] += s.Amount
+		if s.Currency != "" {
+			if byCurrency[s.Currency] == nil {
+				byCurrency[s.Currency] = &CurrencyFlow{Currency: s.Currency}
+			}
+			byCurrency[s.Currency].TotalSpending += s.Amount
+			byCurrency[s.Currency].ExpenseTransactions++
+			if spendingByCurrencyAndCategory[s.Currency] == nil {
+				spendingByCurrencyAndCategory[s.Currency] = make(map[string]int)
+				spendingAmountByCurrencyAndCategory[s.Currency] = make(map[string]float64)
+			}
+			spendingByCurrencyAndCategory[s.Currency][s.CategoryName]++
+			spendingAmountByCurrencyAndCategory[s.Currency][s.CategoryName] += s.Amount
+		}
 		if s.Month != "" {
 			uniqueMonths[s.Month] = true
 		}
@@ -93,47 +133,25 @@ func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
 	averageMonthlyIncome := totalIncome / monthCount
 	averageMonthlySpending := totalSpending / monthCount
 
-	// Get top spending categories
-	type catSpend struct {
-		name   string
-		amount float64
-		count  int
-	}
-	var topCategories []catSpend
-	for name, amount := range spendingAmountByCategory {
-		topCategories = append(topCategories, catSpend{
-			name:   name,
-			amount: amount,
-			count:  spendingByCategory[name],
-		})
-	}
+	topSpendingCategories := buildTopSpendingCategories(
+		spendingAmountByCategory,
+		spendingByCategory,
+		totalSpending,
+	)
 
-	// Sort by amount descending
-	for i := 0; i < len(topCategories)-1; i++ {
-		for j := i + 1; j < len(topCategories); j++ {
-			if topCategories[i].amount < topCategories[j].amount {
-				topCategories[i], topCategories[j] = topCategories[j], topCategories[i]
-			}
-		}
-	}
-
-	// Take top 5
-	topN := 5
-	if len(topCategories) < topN {
-		topN = len(topCategories)
-	}
-	var topSpendingCategories []CategorySpending
-	for i := 0; i < topN; i++ {
-		percentage := 0.0
-		if totalSpending > 0 {
-			percentage = (topCategories[i].amount / totalSpending) * 100
-		}
-		topSpendingCategories = append(topSpendingCategories, CategorySpending{
-			CategoryName:     topCategories[i].name,
-			TotalAmount:      topCategories[i].amount,
-			Percentage:       percentage,
-			TransactionCount: topCategories[i].count,
-		})
+	currencies := sortedCurrencyKeys(byCurrency)
+	byCurrencyValues := make(map[string]CurrencyFlow, len(byCurrency))
+	for _, currency := range currencies {
+		summary := byCurrency[currency]
+		summary.NetSavings = summary.TotalIncome - summary.TotalSpending
+		summary.AverageMonthlyIncome = summary.TotalIncome / monthCount
+		summary.AverageMonthlySpending = summary.TotalSpending / monthCount
+		summary.TopSpendingCategories = buildTopSpendingCategories(
+			spendingAmountByCurrencyAndCategory[currency],
+			spendingByCurrencyAndCategory[currency],
+			summary.TotalSpending,
+		)
+		byCurrencyValues[currency] = *summary
 	}
 
 	// Generate recommendations
@@ -155,6 +173,15 @@ func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
 		periodStr = fmt.Sprintf("All data (%d months)", int(monthCount))
 	}
 
+	currencyWarning := ""
+	if len(currencies) > 1 {
+		currencyWarning = "Totals combine multiple currencies. Prefer by_currency values for accurate interpretation."
+	}
+	primaryCurrency := ""
+	if len(currencies) == 1 {
+		primaryCurrency = currencies[0]
+	}
+
 	return &SavingsAnalysis{
 		Period:                 periodStr,
 		TotalIncome:            totalIncome,
@@ -163,6 +190,11 @@ func (db *DB) AnalyzeSavings(months int) (*SavingsAnalysis, error) {
 		SavingsRate:            savingsRate,
 		AverageMonthlyIncome:   averageMonthlyIncome,
 		AverageMonthlySpending: averageMonthlySpending,
+		MixedCurrencies:        len(currencies) > 1,
+		Currencies:             currencies,
+		PrimaryCurrency:        primaryCurrency,
+		CurrencyWarning:        currencyWarning,
+		ByCurrency:             byCurrencyValues,
 		TopSpendingCategories:  topSpendingCategories,
 		Recommendations:        recommendations,
 	}, nil
@@ -277,4 +309,54 @@ func (db *DB) generateSavingsRecommendations(
 	}
 
 	return recommendations
+}
+
+func buildTopSpendingCategories(
+	amountByCategory map[string]float64,
+	countByCategory map[string]int,
+	totalSpending float64,
+) []CategorySpending {
+	type catSpend struct {
+		name   string
+		amount float64
+		count  int
+	}
+
+	var topCategories []catSpend
+	for name, amount := range amountByCategory {
+		topCategories = append(topCategories, catSpend{
+			name:   name,
+			amount: amount,
+			count:  countByCategory[name],
+		})
+	}
+
+	for i := 0; i < len(topCategories)-1; i++ {
+		for j := i + 1; j < len(topCategories); j++ {
+			if topCategories[i].amount < topCategories[j].amount {
+				topCategories[i], topCategories[j] = topCategories[j], topCategories[i]
+			}
+		}
+	}
+
+	topN := 5
+	if len(topCategories) < topN {
+		topN = len(topCategories)
+	}
+
+	var out []CategorySpending
+	for i := 0; i < topN; i++ {
+		percentage := 0.0
+		if totalSpending > 0 {
+			percentage = (topCategories[i].amount / totalSpending) * 100
+		}
+		out = append(out, CategorySpending{
+			CategoryName:     topCategories[i].name,
+			TotalAmount:      topCategories[i].amount,
+			Percentage:       percentage,
+			TransactionCount: topCategories[i].count,
+		})
+	}
+
+	return out
 }

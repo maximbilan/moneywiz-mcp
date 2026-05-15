@@ -22,7 +22,15 @@ func (s *Server) handleListAccounts(ctx context.Context, request mcp.CallToolReq
 		}, nil
 	}
 
-	jsonData, err := json.MarshalIndent(accounts, "", "  ")
+	currencies, mixedCurrencies, currencyWarning := currencyMetaFromAccounts(accounts)
+	response := map[string]interface{}{
+		"accounts":         accounts,
+		"currencies":       currencies,
+		"mixed_currencies": mixedCurrencies,
+		"currency_warning": currencyWarning,
+	}
+
+	jsonData, err := json.MarshalIndent(response, "", "  ")
 	if err != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -42,9 +50,7 @@ func (s *Server) handleListAccounts(ctx context.Context, request mcp.CallToolReq
 				Text: string(jsonData),
 			},
 		},
-		StructuredContent: map[string]interface{}{
-			"accounts": accounts,
-		},
+		StructuredContent: response,
 	}, nil
 }
 

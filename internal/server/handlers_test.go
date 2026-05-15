@@ -51,6 +51,13 @@ func TestHandleListAccountsReturnsStructuredAccounts(t *testing.T) {
 	if accounts[0].Name != "Checking" {
 		t.Fatalf("account name = %q, want %q", accounts[0].Name, "Checking")
 	}
+	currencies, ok := structured["currencies"].([]string)
+	if !ok {
+		t.Fatalf("currencies type = %T, want []string", structured["currencies"])
+	}
+	if len(currencies) != 1 || currencies[0] != "USD" {
+		t.Fatalf("currencies = %#v, want [USD]", currencies)
+	}
 	assertSingleTextContains(t, result, "Checking")
 }
 
@@ -81,6 +88,22 @@ func TestHandleListTransactionsReturnsStructuredTransactions(t *testing.T) {
 	}
 	if transactions[0].ID != 1003 || transactions[1].ID != 1002 {
 		t.Fatalf("transaction order = [%d %d], want [1003 1002]", transactions[0].ID, transactions[1].ID)
+	}
+	if transactions[0].Currency != "USD" {
+		t.Fatalf("transaction currency = %q, want %q", transactions[0].Currency, "USD")
+	}
+	if transactions[0].CategoryName != "Groceries" {
+		t.Fatalf("transaction category = %q, want %q", transactions[0].CategoryName, "Groceries")
+	}
+	if transactions[0].MovementType != "regular" {
+		t.Fatalf("transaction movement_type = %q, want %q", transactions[0].MovementType, "regular")
+	}
+	currencies, ok := structured["currencies"].([]string)
+	if !ok {
+		t.Fatalf("currencies type = %T, want []string", structured["currencies"])
+	}
+	if len(currencies) != 1 || currencies[0] != "USD" {
+		t.Fatalf("currencies = %#v, want [USD]", currencies)
 	}
 	assertSingleTextContains(t, result, "Groceries")
 }
@@ -119,6 +142,13 @@ func TestHandleAnalyzeSpendingTrendsInvalidGroupByFallsBackToMonth(t *testing.T)
 	}
 	if trends[0].Period != "2024-01" || trends[1].Period != "2024-02" {
 		t.Fatalf("trend periods = [%s %s], want [2024-01 2024-02]", trends[0].Period, trends[1].Period)
+	}
+	currencies, ok := structured["currencies"].([]string)
+	if !ok {
+		t.Fatalf("currencies type = %T, want []string", structured["currencies"])
+	}
+	if len(currencies) != 1 || currencies[0] != "USD" {
+		t.Fatalf("currencies = %#v, want [USD]", currencies)
 	}
 }
 
