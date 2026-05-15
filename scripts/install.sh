@@ -6,6 +6,8 @@ SERVER_NAME="${MONEYWIZ_MCP_SERVER_NAME:-moneywiz}"
 INSTALL_DIR="${MONEYWIZ_MCP_INSTALL_DIR:-$HOME/.local/bin}"
 CLAUDE_SCOPE="${MONEYWIZ_MCP_CLAUDE_SCOPE:-user}"
 CLAUDE_DESKTOP_CONFIG_DEFAULT="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+DEFAULT_DB_DIR="${MONEYWIZ_DB_DIR:-$HOME/.moneywiz-mcp}"
+DEFAULT_DB_PATH="$DEFAULT_DB_DIR/ipadMoneyWiz.sqlite"
 
 DB_PATH="${MONEYWIZ_DB_PATH:-}"
 SKIP_CLAUDE_DESKTOP=0
@@ -26,9 +28,11 @@ usage() {
 Usage: $(basename "$0") [options]
 
 Build and install ${BIN_NAME}, then register it with Claude Desktop/Claude Code.
+If --db is omitted, the installer reuses $DEFAULT_DB_PATH or imports the newest local MoneyWiz export automatically.
 
 Options:
   --db <path>                Path to MoneyWiz export folder or ipadMoneyWiz.sqlite
+  --db latest                Import newest local MoneyWiz export into $DEFAULT_DB_PATH
   --name <server-name>       MCP server name in config (default: ${SERVER_NAME})
   --install-dir <dir>        Install directory for binary (default: ${INSTALL_DIR})
   --scope <scope>            Claude Code scope: local|user|project (default: ${CLAUDE_SCOPE})
@@ -78,18 +82,79 @@ resolve_file_path() {
   printf '%s/%s\n' "$dir" "$base"
 }
 
-normalize_db_path() {
-  local value="$1"
-  if [[ -z "$value" ]]; then
-    local canonical="$HOME/.moneywiz-mcp/ipadMoneyWiz.sqlite"
-    if [[ -f "$canonical" ]]; then
-      DB_PATH="$canonical"
+find_latest_export_folder() {
+  local search_root="$1"
+  find "$search_root" -maxdepth 1 -type d -name 'iMoneyWiz-Data-Backup-*' -print 2>/dev/null
+}
+
+find_latest_export_db() {
+  local repo_root="$1"
+  local candidates=""
+  candidates="$(
+    {
+      find_latest_export_folder "$repo_root"
+      find_latest_export_folder "$(dirname "$repo_root")"
+      find_latest_export_folder "$HOME"
+    } | awk '!seen[$0]++'
+  )"
+
+  [[ -n "$candidates" ]] || return 1
+
+  while IFS= read -r folder; do
+    [[ -n "$folder" ]] || continue
+    if [[ -f "$folder/ipadMoneyWiz.sqlite" ]]; then
+      printf '%s\n' "$folder/ipadMoneyWiz.sqlite"
     fi
+  done <<< "$candidates" | xargs -I{} stat -f '%m %N' "{}" 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-
+}
+
+file_mtime() {
+  stat -f '%m' "$1"
+}
+
+auto_import_db_if_needed() {
+  local repo_root="$1"
+  local import_script="$repo_root/scripts/import_db.sh"
+  local canonical="$DEFAULT_DB_PATH"
+  local latest_db=""
+  local latest_mtime=""
+  local canonical_mtime=""
+
+  if [[ -n "$DB_PATH" && "$DB_PATH" != "latest" ]]; then
     return 0
   fi
 
-  if [[ "$value" == "latest" ]]; then
-    DB_PATH="latest"
+  latest_db="$(find_latest_export_db "$repo_root" || true)"
+  if [[ -z "$DB_PATH" && -f "$canonical" && -z "$latest_db" ]]; then
+    DB_PATH="$canonical"
+    return 0
+  fi
+
+  if [[ -z "$latest_db" ]]; then
+    fail "No local MoneyWiz export found. Pass --db <path> or place an iMoneyWiz-Data-Backup-* folder in the repo, parent directory, or home directory."
+  fi
+
+  if [[ -z "$DB_PATH" && -f "$canonical" ]]; then
+    latest_mtime="$(file_mtime "$latest_db")"
+    canonical_mtime="$(file_mtime "$canonical")"
+    if [[ "$canonical_mtime" -ge "$latest_mtime" ]]; then
+      DB_PATH="$canonical"
+      return 0
+    fi
+  fi
+
+  log "Importing latest MoneyWiz export into $canonical..."
+  "$import_script" "$latest_db" >/dev/null
+  DB_PATH="$canonical"
+}
+
+normalize_db_path() {
+  local value="$1"
+  if [[ -z "$value" ]]; then
+    local canonical="$DEFAULT_DB_PATH"
+    if [[ -f "$canonical" ]]; then
+      DB_PATH="$canonical"
+    fi
     return 0
   fi
 
@@ -179,9 +244,9 @@ configure_claude_code() {
   claude mcp remove --scope "$CLAUDE_SCOPE" "$SERVER_NAME" >/dev/null 2>&1 || true
 
   if [[ -n "$DB_PATH" ]]; then
-    claude mcp add --scope "$CLAUDE_SCOPE" "$SERVER_NAME" "$target_bin" -db "$DB_PATH"
+    claude mcp add --scope "$CLAUDE_SCOPE" "$SERVER_NAME" -- "$target_bin" -db "$DB_PATH"
   else
-    claude mcp add --scope "$CLAUDE_SCOPE" "$SERVER_NAME" "$target_bin"
+    claude mcp add --scope "$CLAUDE_SCOPE" "$SERVER_NAME" -- "$target_bin"
   fi
   log "Registered server in Claude Code (scope: $CLAUDE_SCOPE)."
 }
@@ -229,14 +294,16 @@ parse_args() {
 }
 
 main() {
-  parse_args "$@"
-  normalize_db_path "$DB_PATH"
-
   local repo_root
   repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+  parse_args "$@"
+  auto_import_db_if_needed "$repo_root"
+  normalize_db_path "$DB_PATH"
+
   local tmpdir
   tmpdir="$(mktemp -d)"
-  trap 'rm -rf "$tmpdir"' EXIT INT TERM
+  trap "rm -rf '$tmpdir'" EXIT INT TERM
 
   build_binary "$repo_root" "$tmpdir/$BIN_NAME"
   install_binary "$tmpdir/$BIN_NAME"
