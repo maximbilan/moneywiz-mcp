@@ -25,7 +25,17 @@ func (s *Server) handleAnalyzeSpendingTrends(ctx context.Context, request mcp.Ca
 		}, nil
 	}
 
-	jsonData, err := json.MarshalIndent(trends, "", "  ")
+	currencies, mixedCurrencies, currencyWarning := currencyMetaFromSpendingTrends(trends)
+	response := map[string]interface{}{
+		"trends":           trends,
+		"group_by":         groupBy,
+		"months":           months,
+		"currencies":       currencies,
+		"mixed_currencies": mixedCurrencies,
+		"currency_warning": currencyWarning,
+	}
+
+	jsonData, err := json.MarshalIndent(response, "", "  ")
 	if err != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -45,11 +55,7 @@ func (s *Server) handleAnalyzeSpendingTrends(ctx context.Context, request mcp.Ca
 				Text: string(jsonData),
 			},
 		},
-		StructuredContent: map[string]interface{}{
-			"trends":   trends,
-			"group_by": groupBy,
-			"months":   months,
-		},
+		StructuredContent: response,
 	}, nil
 }
 
@@ -70,7 +76,17 @@ func (s *Server) handleAnalyzeIncomeTrends(ctx context.Context, request mcp.Call
 		}, nil
 	}
 
-	jsonData, err := json.MarshalIndent(trends, "", "  ")
+	currencies, mixedCurrencies, currencyWarning := currencyMetaFromIncomeTrends(trends)
+	response := map[string]interface{}{
+		"trends":           trends,
+		"group_by":         groupBy,
+		"months":           months,
+		"currencies":       currencies,
+		"mixed_currencies": mixedCurrencies,
+		"currency_warning": currencyWarning,
+	}
+
+	jsonData, err := json.MarshalIndent(response, "", "  ")
 	if err != nil {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -90,11 +106,7 @@ func (s *Server) handleAnalyzeIncomeTrends(ctx context.Context, request mcp.Call
 				Text: string(jsonData),
 			},
 		},
-		StructuredContent: map[string]interface{}{
-			"trends":   trends,
-			"group_by": groupBy,
-			"months":   months,
-		},
+		StructuredContent: response,
 	}, nil
 }
 

@@ -38,3 +38,4 @@ ipadMoneyWiz.sqlite
 # Built binary
 main
 moneywiz-mcp
+/.gocache/

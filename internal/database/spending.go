@@ -10,6 +10,7 @@ type SpendingData struct {
 	CategoryID   int64   `json:"category_id"`
 	CategoryName string  `json:"category_name"`
 	Amount       float64 `json:"amount"`
+	Currency     string  `json:"currency"`
 	Date         string  `json:"date"`
 	Month        string  `json:"month"` // YYYY-MM format
 	Year         string  `json:"year"`  // YYYY format
@@ -21,6 +22,7 @@ type SpendingTrend struct {
 	TotalSpending    float64            `json:"total_spending"`
 	TransactionCount int                `json:"transaction_count"`
 	ByCategory       map[string]float64 `json:"by_category"` // Category name -> total
+	ByCurrency       map[string]float64 `json:"by_currency"`
 }
 
 // GetSpendingData retrieves spending transactions with category information
@@ -38,12 +40,15 @@ func (db *DB) GetSpendingData(months int) ([]SpendingData, error) {
 		query = `
 			SELECT 
 				COALESCE(c.Z_PK, 0) as category_id,
-				COALESCE(c.ZNAME2, 'Uncategorized') as category_name,
+				c.ZNAME2 as category_name,
 				ABS(t.ZAMOUNT1) as amount,
+				t.ZDESC2 as description,
+				a.ZCURRENCYNAME as currency,
 				CASE WHEN t.ZDATE1 IS NOT NULL THEN datetime('2001-01-01', '+' || CAST(t.ZDATE1 AS INTEGER) || ' seconds') ELSE NULL END as transaction_date,
 				CASE WHEN t.ZDATE1 IS NOT NULL THEN strftime('%Y-%m', datetime('2001-01-01', '+' || CAST(t.ZDATE1 AS INTEGER) || ' seconds')) ELSE NULL END as month,
 				CASE WHEN t.ZDATE1 IS NOT NULL THEN strftime('%Y', datetime('2001-01-01', '+' || CAST(t.ZDATE1 AS INTEGER) || ' seconds')) ELSE NULL END as year
 			FROM ZSYNCOBJECT t
+			LEFT JOIN ZSYNCOBJECT a ON a.Z_PK = t.ZACCOUNT2 AND a.Z_ENT IN (10, 11, 12, 13, 15, 16)
 			LEFT JOIN ZCATEGORYASSIGMENT ca ON ca.ZTRANSACTION = t.Z_PK
 			LEFT JOIN ZSYNCOBJECT c ON c.Z_PK = ca.ZCATEGORY AND c.Z_ENT = 19
 			WHERE t.Z_ENT IN (37, 45, 46, 47, 43)
@@ -56,12 +61,15 @@ func (db *DB) GetSpendingData(months int) ([]SpendingData, error) {
 		query = `
 			SELECT 
 				COALESCE(c.Z_PK, 0) as category_id,
-				COALESCE(c.ZNAME2, 'Uncategorized') as category_name,
+				c.ZNAME2 as category_name,
 				ABS(t.ZAMOUNT1) as amount,
+				t.ZDESC2 as description,
+				a.ZCURRENCYNAME as currency,
 				CASE WHEN t.ZDATE1 IS NOT NULL THEN datetime('2001-01-01', '+' || CAST(t.ZDATE1 AS INTEGER) || ' seconds') ELSE NULL END as transaction_date,
 				CASE WHEN t.ZDATE1 IS NOT NULL THEN strftime('%Y-%m', datetime('2001-01-01', '+' || CAST(t.ZDATE1 AS INTEGER) || ' seconds')) ELSE NULL END as month,
 				CASE WHEN t.ZDATE1 IS NOT NULL THEN strftime('%Y', datetime('2001-01-01', '+' || CAST(t.ZDATE1 AS INTEGER) || ' seconds')) ELSE NULL END as year
 			FROM ZSYNCOBJECT t
+			LEFT JOIN ZSYNCOBJECT a ON a.Z_PK = t.ZACCOUNT2 AND a.Z_ENT IN (10, 11, 12, 13, 15, 16)
 			LEFT JOIN ZCATEGORYASSIGMENT ca ON ca.ZTRANSACTION = t.Z_PK
 			LEFT JOIN ZSYNCOBJECT c ON c.Z_PK = ca.ZCATEGORY AND c.Z_ENT = 19
 			WHERE t.Z_ENT IN (37, 45, 46, 47, 43)
@@ -88,11 +96,13 @@ func (db *DB) GetSpendingData(months int) ([]SpendingData, error) {
 		var sd SpendingData
 		var categoryID sql.NullInt64
 		var categoryName sql.NullString
+		var description sql.NullString
+		var currency sql.NullString
 		var date sql.NullString
 		var month sql.NullString
 		var year sql.NullString
 
-		err := rows.Scan(&categoryID, &categoryName, &sd.Amount, &date, &month, &year)
+		err := rows.Scan(&categoryID, &categoryName, &sd.Amount, &description, &currency, &date, &month, &year)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan spending data: %w", err)
 		}
@@ -103,6 +113,9 @@ func (db *DB) GetSpendingData(months int) ([]SpendingData, error) {
 		if categoryName.Valid {
 			sd.CategoryName = categoryName.String
 		}
+		if currency.Valid {
+			sd.Currency = currency.String
+		}
 		if date.Valid {
 			sd.Date = date.String
 		}
@@ -112,6 +125,15 @@ func (db *DB) GetSpendingData(months int) ([]SpendingData, error) {
 		if year.Valid {
 			sd.Year = year.String
 		}
+		desc := ""
+		if description.Valid {
+			desc = description.String
+		}
+		movementType := detectMovementType(desc)
+		if isInternalMovement(movementType) {
+			continue
+		}
+		sd.CategoryName = fallbackCategoryName(sd.CategoryName, desc)
 
 		spending = append(spending, sd)
 	}
@@ -155,6 +177,7 @@ func (db *DB) AnalyzeSpendingTrends(groupBy string, months int) ([]SpendingTrend
 			trendsMap[period] = &SpendingTrend{
 				Period:     period,
 				ByCategory: make(map[string]float64),
+				ByCurrency: make(map[string]float64),
 			}
 		}
 
@@ -162,6 +185,9 @@ func (db *DB) AnalyzeSpendingTrends(groupBy string, months int) ([]SpendingTrend
 		trend.TotalSpending += s.Amount
 		trend.TransactionCount++
 		trend.ByCategory[s.CategoryName] += s.Amount
+		if s.Currency != "" {
+			trend.ByCurrency[s.Currency] += s.Amount
+		}
 	}
 
 	// Convert to slice and sort by period

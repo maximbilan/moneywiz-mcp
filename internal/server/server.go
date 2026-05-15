@@ -23,7 +23,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	log.Println("  ✓ Registering tool: list_accounts")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "list_accounts",
-		Description: "List all accounts in MoneyWiz with their balances and currencies",
+		Description: "List all MoneyWiz accounts with balances and explicit account currencies",
 		InputSchema: mcp.ToolInputSchema{
 			Type:       "object",
 			Properties: map[string]any{},
@@ -51,7 +51,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	log.Println("  ✓ Registering tool: list_transactions")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "list_transactions",
-		Description: "List recent transactions, optionally filtered by account ID",
+		Description: "List recent transactions with account name, currency, category, and movement type; transfer-like rows are labeled explicitly",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]any{
@@ -83,7 +83,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	log.Println("  ✓ Registering tool: analyze_spending_trends")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "analyze_spending_trends",
-		Description: "Analyze spending trends by category and time period (month or year)",
+		Description: "Analyze spending trends by category and time period (month or year), including by_currency totals and excluding internal transfers/cash withdrawals",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]any{
@@ -106,7 +106,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	log.Println("  ✓ Registering tool: analyze_income_trends")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "analyze_income_trends",
-		Description: "Analyze income trends by category and time period (month or year)",
+		Description: "Analyze income trends by category and time period (month or year), including by_currency totals and excluding internal transfers/cash withdrawals",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]any{
@@ -129,7 +129,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	log.Println("  ✓ Registering tool: get_savings_recommendations")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "get_savings_recommendations",
-		Description: "Analyze income vs spending and get personalized savings recommendations",
+		Description: "Analyze income vs spending with per-currency breakdowns and mixed-currency warnings, then return savings recommendations",
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]any{
@@ -157,7 +157,7 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	log.Println("  ✓ Registering tool: get_financial_stats")
 	mcpServer.AddTool(mcp.Tool{
 		Name:        "get_financial_stats",
-		Description: "Get comprehensive financial statistics including total transactions, income, spending, and other metrics from all historical data",
+		Description: "Get comprehensive financial statistics with explicit currency context, per-currency breakdowns, and totals excluding internal transfers/cash withdrawals",
 		InputSchema: mcp.ToolInputSchema{
 			Type:       "object",
 			Properties: map[string]any{},

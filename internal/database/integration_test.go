@@ -28,6 +28,22 @@ func TestAnalyzeSavingsWithFixtureDB(t *testing.T) {
 	assertFloatClose(t, "average monthly income", got.AverageMonthlyIncome, 2750, 0.001)
 	assertFloatClose(t, "average monthly spending", got.AverageMonthlySpending, 750, 0.001)
 	assertFloatClose(t, "savings rate", got.SavingsRate, 72.7272727, 0.001)
+	if got.MixedCurrencies {
+		t.Fatal("mixed currencies = true, want false")
+	}
+	if got.PrimaryCurrency != "USD" {
+		t.Fatalf("primary currency = %q, want %q", got.PrimaryCurrency, "USD")
+	}
+	if len(got.Currencies) != 1 || got.Currencies[0] != "USD" {
+		t.Fatalf("currencies = %#v, want [USD]", got.Currencies)
+	}
+	usd, ok := got.ByCurrency["USD"]
+	if !ok {
+		t.Fatal("missing USD by_currency summary")
+	}
+	assertFloatClose(t, "usd total income", usd.TotalIncome, 5500, 0.001)
+	assertFloatClose(t, "usd total spending", usd.TotalSpending, 1500, 0.001)
+	assertFloatClose(t, "usd net savings", usd.NetSavings, 4000, 0.001)
 
 	if len(got.TopSpendingCategories) != 2 {
 		t.Fatalf("top spending categories len = %d, want 2", len(got.TopSpendingCategories))
@@ -105,6 +121,18 @@ func TestGetTransactionsAndCategoriesWithFixtureDB(t *testing.T) {
 	if transactions[0].Date != "2024-02-10 00:00:00" {
 		t.Fatalf("latest transaction date = %q", transactions[0].Date)
 	}
+	if transactions[0].AccountName != "Checking" {
+		t.Fatalf("transaction account name = %q, want %q", transactions[0].AccountName, "Checking")
+	}
+	if transactions[0].Currency != "USD" {
+		t.Fatalf("transaction currency = %q, want %q", transactions[0].Currency, "USD")
+	}
+	if transactions[0].CategoryName != "Groceries" {
+		t.Fatalf("transaction category = %q, want %q", transactions[0].CategoryName, "Groceries")
+	}
+	if transactions[0].MovementType != movementTypeRegular {
+		t.Fatalf("transaction movement_type = %q, want %q", transactions[0].MovementType, movementTypeRegular)
+	}
 
 	categories, err := db.GetCategories()
 	if err != nil {
@@ -135,6 +163,7 @@ func TestAnalyzeIncomeAndSpendingTrendsWithFixtureDB(t *testing.T) {
 	assertFloatClose(t, "jan income", incomeMonthly[0].TotalIncome, 3000, 0.001)
 	assertFloatClose(t, "feb income", incomeMonthly[1].TotalIncome, 2500, 0.001)
 	assertFloatClose(t, "salary jan breakdown", incomeMonthly[0].ByCategory["Salary"], 3000, 0.001)
+	assertFloatClose(t, "jan income usd breakdown", incomeMonthly[0].ByCurrency["USD"], 3000, 0.001)
 
 	spendingMonthly, err := db.AnalyzeSpendingTrends("month", 0)
 	if err != nil {
@@ -147,6 +176,7 @@ func TestAnalyzeIncomeAndSpendingTrendsWithFixtureDB(t *testing.T) {
 	assertFloatClose(t, "feb spending", spendingMonthly[1].TotalSpending, 300, 0.001)
 	assertFloatClose(t, "rent jan breakdown", spendingMonthly[0].ByCategory["Rent"], 1200, 0.001)
 	assertFloatClose(t, "groceries feb breakdown", spendingMonthly[1].ByCategory["Groceries"], 300, 0.001)
+	assertFloatClose(t, "jan spending usd breakdown", spendingMonthly[0].ByCurrency["USD"], 1200, 0.001)
 
 	incomeYearly, err := db.AnalyzeIncomeTrends("year", 0)
 	if err != nil {
@@ -198,6 +228,22 @@ func TestGetFinancialStatsWithFixtureDB(t *testing.T) {
 	assertFloatClose(t, "average transaction", got.AverageTransaction, 1750, 0.001)
 	assertFloatClose(t, "largest income", got.LargestIncome, 3000, 0.001)
 	assertFloatClose(t, "largest expense", got.LargestExpense, 1200, 0.001)
+	if got.MixedCurrencies {
+		t.Fatal("mixed currencies = true, want false")
+	}
+	if got.PrimaryCurrency != "USD" {
+		t.Fatalf("primary currency = %q, want %q", got.PrimaryCurrency, "USD")
+	}
+	if len(got.Currencies) != 1 || got.Currencies[0] != "USD" {
+		t.Fatalf("currencies = %#v, want [USD]", got.Currencies)
+	}
+	usd, ok := got.ByCurrency["USD"]
+	if !ok {
+		t.Fatal("missing USD by_currency stats")
+	}
+	assertFloatClose(t, "usd average transaction", usd.AverageTransaction, 1750, 0.001)
+	assertFloatClose(t, "usd total income", usd.TotalIncome, 5500, 0.001)
+	assertFloatClose(t, "usd total spending", usd.TotalSpending, 1500, 0.001)
 
 	if got.FirstTransactionDate != "2024-01-15 00:00:00" {
 		t.Fatalf("first transaction date = %q", got.FirstTransactionDate)
@@ -221,7 +267,104 @@ func TestGetFinancialStatsWithFixtureDB(t *testing.T) {
 	}
 }
 
+func TestMixedCurrencyStatsAndInternalMovementsWithFixtureDB(t *testing.T) {
+	db := newFixtureDBWithExtraRows(t, func(conn *sql.DB) {
+		mustExecSQL(t, conn, `
+			INSERT INTO ZSYNCOBJECT (Z_PK, Z_ENT, ZNAME, ZBALLANCE, ZOPENINGBALANCE, ZCURRENCYNAME, ZTYPE)
+			VALUES (2, 10, 'EUR Checking', 0, 500, 'EUR', 'bank');
+		`)
+
+		insertTransaction(t, conn, 2000, 37, 2000, "2024-02-15", "Consulting invoice", 2, 0, 100)
+		insertTransaction(t, conn, 2001, 37, -500, "2024-02-16", "Groceries EU", 2, 0, 102)
+		insertUncategorizedTransaction(t, conn, 2002, 43, -100, "2024-02-17", "Transfer to Cash", 1, 0)
+		insertUncategorizedTransaction(t, conn, 2003, 43, 100, "2024-02-17", "Transfer from Checking", 2, 0)
+		insertUncategorizedTransaction(t, conn, 2004, 46, -50, "2024-02-18", "ATM Withdrawal", 1, 0)
+		insertUncategorizedTransaction(t, conn, 2005, 46, 50, "2024-02-18", "ATM Withdrawal", 2, 0)
+	})
+	defer db.Close()
+
+	savings, err := db.AnalyzeSavings(0)
+	if err != nil {
+		t.Fatalf("AnalyzeSavings: %v", err)
+	}
+	if !savings.MixedCurrencies {
+		t.Fatal("mixed currencies = false, want true")
+	}
+	if savings.CurrencyWarning == "" {
+		t.Fatal("currency warning is empty")
+	}
+	if savings.PrimaryCurrency != "" {
+		t.Fatalf("primary currency = %q, want empty", savings.PrimaryCurrency)
+	}
+	if len(savings.Currencies) != 2 || savings.Currencies[0] != "EUR" || savings.Currencies[1] != "USD" {
+		t.Fatalf("currencies = %#v, want [EUR USD]", savings.Currencies)
+	}
+	assertFloatClose(t, "mixed total income", savings.TotalIncome, 7500, 0.001)
+	assertFloatClose(t, "mixed total spending", savings.TotalSpending, 2000, 0.001)
+	assertFloatClose(t, "usd income", savings.ByCurrency["USD"].TotalIncome, 5500, 0.001)
+	assertFloatClose(t, "usd spending", savings.ByCurrency["USD"].TotalSpending, 1500, 0.001)
+	assertFloatClose(t, "eur income", savings.ByCurrency["EUR"].TotalIncome, 2000, 0.001)
+	assertFloatClose(t, "eur spending", savings.ByCurrency["EUR"].TotalSpending, 500, 0.001)
+
+	stats, err := db.GetFinancialStats()
+	if err != nil {
+		t.Fatalf("GetFinancialStats: %v", err)
+	}
+	if !stats.MixedCurrencies {
+		t.Fatal("mixed currencies = false, want true")
+	}
+	if stats.CurrencyWarning == "" {
+		t.Fatal("currency warning is empty")
+	}
+	if stats.TotalTransactions != 6 {
+		t.Fatalf("total transactions = %d, want 6", stats.TotalTransactions)
+	}
+	assertFloatClose(t, "stats total income", stats.TotalIncome, 7500, 0.001)
+	assertFloatClose(t, "stats total spending", stats.TotalSpending, 2000, 0.001)
+	assertFloatClose(t, "stats eur income", stats.ByCurrency["EUR"].TotalIncome, 2000, 0.001)
+	assertFloatClose(t, "stats eur spending", stats.ByCurrency["EUR"].TotalSpending, 500, 0.001)
+
+	transactions, err := db.GetTransactions(0, 10)
+	if err != nil {
+		t.Fatalf("GetTransactions: %v", err)
+	}
+	foundTransfer := false
+	foundATM := false
+	for _, txn := range transactions {
+		if txn.Description == "Transfer to Cash" {
+			foundTransfer = true
+			if txn.MovementType != movementTypeTransfer {
+				t.Fatalf("transfer movement type = %q, want %q", txn.MovementType, movementTypeTransfer)
+			}
+			if txn.CategoryName != "Internal Transfer" {
+				t.Fatalf("transfer category = %q, want %q", txn.CategoryName, "Internal Transfer")
+			}
+		}
+		if txn.Description == "ATM Withdrawal" && txn.Amount < 0 {
+			foundATM = true
+			if txn.MovementType != movementTypeCashWithdrawal {
+				t.Fatalf("atm movement type = %q, want %q", txn.MovementType, movementTypeCashWithdrawal)
+			}
+			if txn.CategoryName != "Cash Withdrawal" {
+				t.Fatalf("atm category = %q, want %q", txn.CategoryName, "Cash Withdrawal")
+			}
+		}
+	}
+	if !foundTransfer {
+		t.Fatal("did not find transfer transaction")
+	}
+	if !foundATM {
+		t.Fatal("did not find atm withdrawal transaction")
+	}
+}
+
 func newFixtureDB(t *testing.T) *DB {
+	t.Helper()
+
+	return newFixtureDBWithExtraRows(t, nil)
+}
+
+func newFixtureDBWithExtraRows(t *testing.T, extraRows func(conn *sql.DB)) *DB {
 	t.Helper()
 
 	path := filepath.Join(t.TempDir(), "moneywiz-fixture.sqlite")
@@ -256,6 +399,9 @@ func newFixtureDB(t *testing.T) *DB {
 	`)
 
 	insertFixtureRows(t, conn)
+	if extraRows != nil {
+		extraRows(conn)
+	}
 
 	db, err := NewDB(path)
 	if err != nil {
@@ -297,6 +443,15 @@ func insertTransaction(t *testing.T, conn *sql.DB, id, ent int64, amount float64
 		INSERT INTO ZCATEGORYASSIGMENT (ZTRANSACTION, ZCATEGORY)
 		VALUES (?, ?);
 	`, id, category)
+}
+
+func insertUncategorizedTransaction(t *testing.T, conn *sql.DB, id, ent int64, amount float64, date, description string, account2, account int64) {
+	t.Helper()
+
+	mustExecSQL(t, conn, `
+		INSERT INTO ZSYNCOBJECT (Z_PK, Z_ENT, ZAMOUNT1, ZDATE1, ZDESC2, ZACCOUNT2, ZACCOUNT)
+		VALUES (?, ?, ?, ?, ?, ?, ?);
+	`, id, ent, amount, coreDataSeconds(t, date), description, account2, account)
 }
 
 func coreDataSeconds(t *testing.T, date string) float64 {
