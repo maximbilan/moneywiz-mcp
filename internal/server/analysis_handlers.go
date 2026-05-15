@@ -9,12 +9,8 @@ import (
 )
 
 func (s *Server) handleAnalyzeSpendingTrends(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	groupBy := request.GetString("group_by", "month")
+	groupBy := normalizeGroupBy(request.GetString("group_by", "month"))
 	months := request.GetInt("months", 0)
-
-	if groupBy != "month" && groupBy != "year" {
-		groupBy = "month"
-	}
 
 	trends, err := s.db.AnalyzeSpendingTrends(groupBy, months)
 	if err != nil {
@@ -58,12 +54,8 @@ func (s *Server) handleAnalyzeSpendingTrends(ctx context.Context, request mcp.Ca
 }
 
 func (s *Server) handleAnalyzeIncomeTrends(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	groupBy := request.GetString("group_by", "month")
+	groupBy := normalizeGroupBy(request.GetString("group_by", "month"))
 	months := request.GetInt("months", 0)
-
-	if groupBy != "month" && groupBy != "year" {
-		groupBy = "month"
-	}
 
 	trends, err := s.db.AnalyzeIncomeTrends(groupBy, months)
 	if err != nil {

@@ -9,13 +9,10 @@ import (
 )
 
 func (s *Server) handleListTransactions(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	accountIDFloat := request.GetFloat("account_id", 0)
-	accountID := int64(accountIDFloat)
-	limit := request.GetInt("limit", 50)
-
-	if limit == 0 {
-		limit = 50
-	}
+	accountID, limit := normalizeTransactionParams(
+		request.GetFloat("account_id", 0),
+		request.GetInt("limit", defaultTransactionLimit),
+	)
 
 	transactions, err := s.db.GetTransactions(accountID, limit)
 	if err != nil {
