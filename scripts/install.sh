@@ -150,14 +150,6 @@ auto_import_db_if_needed() {
 
 normalize_db_path() {
   local value="$1"
-  if [[ -z "$value" ]]; then
-    local canonical="$DEFAULT_DB_PATH"
-    if [[ -f "$canonical" ]]; then
-      DB_PATH="$canonical"
-    fi
-    return 0
-  fi
-
   if [[ -d "$value" ]]; then
     value="${value%/}/ipadMoneyWiz.sqlite"
   fi
@@ -214,10 +206,7 @@ mcp_servers = config.get("mcpServers")
 if not isinstance(mcp_servers, dict):
     mcp_servers = {}
 
-entry = {"command": command_path, "args": []}
-if db_path:
-    entry["args"] = ["-db", db_path]
-
+entry = {"command": command_path, "args": ["-db", db_path]}
 mcp_servers[server_name] = entry
 config["mcpServers"] = mcp_servers
 
@@ -242,12 +231,7 @@ configure_claude_code() {
   esac
 
   claude mcp remove --scope "$CLAUDE_SCOPE" "$SERVER_NAME" >/dev/null 2>&1 || true
-
-  if [[ -n "$DB_PATH" ]]; then
-    claude mcp add --scope "$CLAUDE_SCOPE" "$SERVER_NAME" -- "$target_bin" -db "$DB_PATH"
-  else
-    claude mcp add --scope "$CLAUDE_SCOPE" "$SERVER_NAME" -- "$target_bin"
-  fi
+  claude mcp add --scope "$CLAUDE_SCOPE" "$SERVER_NAME" -- "$target_bin" -db "$DB_PATH"
   log "Registered server in Claude Code (scope: $CLAUDE_SCOPE)."
 }
 
@@ -299,6 +283,7 @@ main() {
 
   parse_args "$@"
   auto_import_db_if_needed "$repo_root"
+  [[ -n "$DB_PATH" ]] || fail "Database path resolution failed."
   normalize_db_path "$DB_PATH"
 
   local tmpdir

@@ -102,8 +102,9 @@ print_next_steps() {
   cat <<EOF
 
 Next steps:
-- Use this stable path in MCP config: $TARGET_DB_PATH
 - Install/re-register with:
+  ./scripts/install.sh
+- Or pin the exact path manually:
   ./scripts/install.sh --db "$TARGET_DB_PATH"
 - Or set:
   export MONEYWIZ_DB_PATH="$TARGET_DB_PATH"
