@@ -18,7 +18,7 @@ func NewServer(db *database.DB) *Server {
 
 func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 	log.Println("🔧 Registering MCP tools...")
-	
+
 	// List accounts tool
 	log.Println("  ✓ Registering tool: list_accounts")
 	mcpServer.AddTool(mcp.Tool{
@@ -163,6 +163,6 @@ func (s *Server) RegisterHandlers(mcpServer *mcpserver.MCPServer) {
 			Properties: map[string]any{},
 		},
 	}, s.handleGetFinancialStats)
-	
+
 	log.Println("✅ All 9 MCP tools registered successfully!")
 }

@@ -1,5 +1,8 @@
 # MoneyWiz MCP Server
 
+[![Build and Test](https://github.com/maximbilan/moneywiz-mcp/actions/workflows/build-test.yml/badge.svg)](https://github.com/maximbilan/moneywiz-mcp/actions/workflows/build-test.yml)
+[![Release](https://img.shields.io/github/v/release/maximbilan/moneywiz-mcp)](https://github.com/maximbilan/moneywiz-mcp/releases)
+
 An MCP (Model Context Protocol) server for accessing MoneyWiz database data. This server allows ChatGPT, Claude, and other MCP-compatible clients to query your MoneyWiz financial data, analyze spending and income trends, get savings recommendations, calculate net worth, and view comprehensive financial statistics.
 
 ## Features
@@ -46,6 +49,16 @@ With explicit database path (folder/sqlite/latest):
 ```bash
 ./scripts/install.sh --db latest
 ```
+
+### Release downloads
+
+Tagged releases publish:
+- `moneywiz-mcp-darwin-arm64`
+- `moneywiz-mcp-darwin-amd64`
+- `moneywiz-mcp-darwin-universal`
+- `SHA256SUMS`
+
+The release workflow does not publish a standalone installer yet. `scripts/install.sh` is source-tree based and is meant to be run from this repository.
 
 ### 3. Import DB to a stable path (recommended)
 
@@ -395,6 +408,28 @@ moneywiz-mcp/
 
 ```bash
 go build -o moneywiz-mcp ./cmd/main.go
+```
+
+### Validation
+
+```bash
+gofmt -l .
+go build ./...
+go vet ./...
+go test ./... -race
+bash -n scripts/*.sh
+```
+
+### Release Validation
+
+Before tagging a release:
+
+```bash
+gofmt -l .
+go build ./...
+go vet ./...
+go test ./... -race
+bash -n scripts/*.sh
 ```
 
 ### Dependencies
